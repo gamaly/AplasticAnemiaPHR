@@ -1,0 +1,13 @@
+name: MyHealthApp
+title: MyHealthApp
+username:
+account: state-cso
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 300599
+bundleId: 1842295
+url: https://gamaly.shinyapps.io/MyHealthApp/
+when: 1548712422.72922
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: ShinyHealthApp/AllHealthData.RData|ShinyHealthApp/HospitalDates.RData|ShinyHealthApp/rsconnect/shinyapps.io/state-cso/ShinyHealthApp.dcf

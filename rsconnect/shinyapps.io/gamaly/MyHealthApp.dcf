@@ -1,0 +1,12 @@
+name: MyHealthApp
+title: MyHealthApp
+username:
+account: gamaly
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 300599
+bundleId: 2142916
+url: https://gamaly.shinyapps.io/MyHealthApp/
+when: 1560182249.65102
+asMultiple: FALSE
+asStatic: FALSE

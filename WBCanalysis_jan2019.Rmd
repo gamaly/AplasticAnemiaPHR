@@ -1,0 +1,170 @@
+---
+title: "Analysis of Correlates to White Blood Cell Counts"
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+date: "January 28, 2019"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##About
+This paper will further examine factors that may contribute to fluctuations in White Blood Cells, and will extend on Spring 2018 findings that Prednisone is highly correlated with White Blood Cell counts in the patient.
+
+## Background
+
+White Blood Cell (WBC) counts trended upwards for the months of January, February, and March 2018, diverging from Red Blood Cell and Platelet counts. This upward trend initially resulted in an assessment that Aplastic Anemia was unlikely. However, bivariate regression analysis of WBCs and Prednisone intake showed a statistically significant correlation (P < .001) and an R Squared of .38 for that three month period of time. Accounting for 60% of the variance in WBC counts per day, the model predicted an increase of .032 (K/uL) WBCs for every additional 1mg of Prednisone. The linear model did not account for infusions.
+
+After further diagnosis, patient was diagnosed with Severe Aplastic Anemia, and admitted to a clinical trial at the National Institute of Health (NIH) in May 2018. The patient received experimental treatment in the form of three medications, H-ATG, Cyclosporine, and Eltrombopag. After treatment, the WBC explanatory model changed dramatically - the increased number of medications while inpatient at NIH appear to have reduced the direct effectiveness of Prednisone on WBCs.
+
+Following the instructions of the clinical trial, the patient stopped taking Eltrombopag on November 6, 2018, and reduced daily Cyclosporine levels to 150mg/day. Additionally, the patient has continued to taper Predisone intake, with a goal of stopping altogether. 
+
+```{r HospitalDates, echo=FALSE, message=FALSE, fig.height=4, warning=FALSE, fig.width=12}
+load(file="HospitalDates.RData")
+library(dplyr)
+library(plotly)
+library(ggplot2)
+
+ggplot(data=HospitalDates, aes(x=Date, y= `WBC (K/uL)`)) + geom_line() + geom_point() + labs(title = "Figure 1 - White Blood Cell Counts Over Time")
+ggplot(data=HospitalDates, aes(x=Date, y= `Prednisone (mg/day)`)) + geom_line() + geom_point() + labs(title = "Figure 2 - Prednisone Intake Over Time")
+ggplot(data=HospitalDates, aes(x=Date, y= `Eltrombopag (mg/day)`)) + geom_line() + geom_point() + labs(title = "Figure 3 - Eltrombopag Intake Over Time")
+ggplot(data=HospitalDates, aes(x=Date, y= `Cyclosporine (mg/day)`)) + geom_line() + geom_point() + labs(title = "Figure 4 - Cyclosporine Intake Over Time")
+
+
+
+
+```
+
+## Hypotheses
+
+This paper will seek to test two hypotheses.
+
+Hypothesis 1: Prednisone does not highly correlate with WBC counts while the patient takes Eltrombopag and Cyclosporine at high doses.
+
+Hypothesis 2: Prednisone does highly correlate with WBC counts once Cyclosporine and Eltrombopag are reduced or discontinued.
+
+
+# Procedure
+
+This analysis will use linear regression analysis to test for correlations between White Blood Cell Counts (WBCs), and three independent, explanatory variables: Prednisone (mg/day), Eltrombopag (mg/day), and Cyclosporine (mg/day). This section will provide an overview of the data management process, data cleaning and preparation, and the regression test.
+
+#### Data Management, Cleaning, and Preparation
+
+The patient entered medication levels and blood test results into a database starting early 2018. Medication data was entered daily. CBC data was entered daily during hospital stays, and weekly while outpatient. To increase our sample size, we will use interpolation to fill in for missing CBC data. The ImputeTS package will be used, as shown in the following code block.
+
+```{r echo=TRUE, fig.height=4,  fig.width=12, warning=FALSE}
+#Load ImputeTS
+library(imputeTS)
+#Interpolate NAs and add to a new column in our dataset
+HospitalDates$`WBC (K/uL) Interpolated` <- na.interpolation(HospitalDates$`WBC (K/uL)`)
+
+#Plot actual WBC counts over time
+ggplot(data=HospitalDates, aes(x=Date, y= `WBC (K/uL)`)) + geom_point() + labs(title = "Figure 5 - White Blood Cell Counts Actual")
+
+#Plot interpolated WBC counts over time
+ggplot(data=HospitalDates, aes(x=Date, y= `WBC (K/uL) Interpolated`)) + geom_point() + labs(title = "Figure 6 - White Blood Cell Interpolated")
+
+
+```
+
+To test our hypotheses, we will subset our data into three time periods: 1) May 7 - November 7, 2018, 2) November 7 - Present, and 3) September 1 - Present. The first time period is the height of the clinical trial, during which the patient received varying levels of Cyclosporine and Prednisone, and a constant dose of Eltrombopage (150mg). The second time period is the beginning of the maintenance dosage of medication, during which the patient ended Eltrombopag, lowered the cyclosporine dose, and tapered Prednisone levels. The third time period captures both periods that include Eltrombopag and higher doses of Cyclosporine, but are removed from the major period of blood infusions.
+
+```{r}
+#Subset data to clinial trial
+ClinicalTrialDates <- filter(HospitalDates, Date >= "2018-05-06" & Date <= "2018-11-06")
+
+#Subset data to maintenance dose
+PostEltrombopagDates <- filter(HospitalDates, Date >= "2018-11-07")
+
+#Subset data to post-Infusion period
+PostThreeMonthCheckup <- filter(HospitalDates, Date >= "2018-09-01")
+
+```
+
+With three distinct datasets ready, we will build two models.
+
+Model 1 and 3 includes all three medications as independent variables, while Model 2 includes only Prednisone. This decision is made due to the presence of variance of the IVs during Period 1 and 3, while there is no variance in Eltrombopag or Cyclosporine intake in Period 2. 
+
+```{r echo=TRUE}
+
+#Build Time Period 1 Model
+WBCPredEltromCyclofit_TimePeriodOne <- lm(`WBC (K/uL) Interpolated` ~ `Prednisone (mg/day)` + `Eltrombopag (mg/day)` + `Cyclosporine (mg/day)`, data = ClinicalTrialDates)
+
+#Build Time Period 2 Model
+WBCPredEltromCyclofit_TimePeriodTwo <- lm(`WBC (K/uL) Interpolated` ~ `Prednisone (mg/day)`, data = PostEltrombopagDates)
+
+#Build Time Period 3 Model
+WBCPredEltromCyclofit_TimePeriodThree <- lm(`WBC (K/uL) Interpolated` ~ `Prednisone (mg/day)` + `Eltrombopag (mg/day)` + `Cyclosporine (mg/day)`, data = PostThreeMonthCheckup)
+
+```
+
+# Results
+In this section we will examine the results of the linear model, which aim to test our hypothesis that 1) Prednisone is not a major driver of WBC counts during the height of the clinical trial, and 2) that prednisone is a major driver of WBC counts once other major medications are not taken. 
+
+###Time Period 1: May 6 - November 6, 2018
+```{r echo=FALSE}
+
+#Output of Period 1 Model
+summary(WBCPredEltromCyclofit_TimePeriodOne)
+```
+
+Time period one takes place between May 6 and November 6, 2018. During this time, the patient recieved dozens of medications and regular Red Blood Cell and Platelet Infusions. The results of the model show a significant negative correlation between Cyclosporine and WBCs, and no significant relationship between Eltrombopag or Prednisone and WBCs. The model shows that for every additional milligram of Cyclosporine, we can expect a 0.012 decrease in WBC count.
+
+###Time Period 2: November 7, 2018 - Present
+``` {r echo=FALSE}
+#Output of Period 2 Model
+summary(WBCPredEltromCyclofit_TimePeriodTwo)
+
+```
+Time period two takes place from November 7 to present. During this time, the patient received no infusions, stopped taking Eltrombopag, and reduced daily Cyclosporine intake. The results of the model show a highly significant positive correlation between Prednisone and WBCs. The model shows that for every additional milligram of Prednisone, we can expect a 0.5 increase in WBC (K/uL).
+
+###Time Period 3: September 1, 2018 - Present
+
+``` {r echo=FALSE}
+#Output of Period 3 Model
+summary(WBCPredEltromCyclofit_TimePeriodThree)
+
+```
+Time period three takes place from September 1 to present. During this time, the patient received few infusions, but took both Eltrombopag and higher doses of Cyclosporine and Prednisone. The results of the model show a highly significant positive correlation between Prednisone and WBCs, and a somewhat significant negative correlation between Cyclosporine and WBCs. 
+
+
+#Conclusions
+
+Results of the experiment prove the hypothesis correct. During summer 2018, Prednisone did not appear to correlate with a change with WBCs. Once medications were tapered or removed completely, Prednisone appeared to significatly correlate with WBC counts. Cyclosporine appeared to negatively correlate with WBCs. 
+
+## Predictions
+Using the multivariate linear Scenario 2 and 3 models, we can make rough predictions about the patient's WBC counts based on multiple scenarios. The following tables shows predictions based on varying levels of Predisone.
+
+####Model 2 Predictions
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+library(knitr)
+library(googlesheets)
+
+healthData <- gs_url("https://docs.google.com/spreadsheets/d/1O_a3mpZsCKOEQz5MXOzzYU0X1rEbCg6_jhkLVWUOnc8/edit?usp=sharing")
+forecastData <- gs_read(ss=healthData, ws = "Scenarios2", skip = 0)
+  
+forecastData$WBC_Prediction <- predict(WBCPredEltromCyclofit_TimePeriodTwo, newdata = forecastData)
+kable(forecastData)
+
+
+
+```
+
+####Model 3 Predictions
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+library(knitr)
+library(googlesheets)
+
+healthData <- gs_url("https://docs.google.com/spreadsheets/d/1O_a3mpZsCKOEQz5MXOzzYU0X1rEbCg6_jhkLVWUOnc8/edit?usp=sharing")
+forecastData <- gs_read(ss=healthData, ws = "Scenarios", skip = 0)
+  
+forecastData$WBC_Prediction <- predict(WBCPredEltromCyclofit_TimePeriodThree, newdata = forecastData)
+kable(forecastData)
+
+
+
+```
+

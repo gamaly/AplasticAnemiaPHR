@@ -1,0 +1,72 @@
+---
+title: "Bisoprolol Intake and Blood Test Results"
+author: "Gregory Maly"
+date: "March 19, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Background
+
+An early theory for the cause of Pancytopenia was that of adverse reactions to medication. However, at the time of this writing, it has been two months since initial hospital intake, and blood cell counts have not returned to normal. However, after long term observation of medication intake, one medication remained part of the daily dose: Bisoprolol.
+
+While rare, Bisoprolol has been found to cause multiple symptoms seen in the patient, including low white blood cell countse, low red blood cell counts, low platelet counts, bruising, and gout. On March 18, patient stopped taking Bisoprolol to test the possibility of a correlation between symptoms and medication intake
+
+At this point it is too early to consider a bivariate relational correlation between Bisoprolol intake and blood health, due to the lack of variance in historica data. Patient took 5 mg/day of Bisoprolol for the past 6 months. We can, however, observe rate of change in blood cell counts to detect possible early signs of medication effects.
+
+## Testing for Rate of Change
+
+To examine rate of change, we will calculate the rate of change in blood cells, accounting for red blood cell and platelet infusions. If Bisoprolol has a negative effect on blood health, we may start to see blood cells drop at a slower rate than in the past eight weeks. 
+
+While blood was drawn on a daily basis from January 22 - February 23, blood is now drawn three to four days a week. We will therefore calculate the rolling average of blood cell counts to replace NAs. 
+
+```{r Rolling Average}
+#Create new datatable with moving averages as NA.
+load("HospitalDates.RData")
+library(imputeTS)
+
+RateOfchange <- data.frame(
+  Date <- HospitalDates$Date,
+  WBC <- na.ma(HospitalDates$`WBC (K/uL)`, k = 2, weighting = "simple"),
+  RBC <- na.ma(HospitalDates$`RBCs (M/uL)`, k = 2, weighting = "simple"),
+  Platelets <- na.ma(HospitalDates$`Platelets (K/uL)`, k = 2, weighting = "simple"),
+  RBCinfusion <- HospitalDates$`RBC Infusion (unit)`,
+  PltInfusion <- HospitalDates$`Platelets Infusion (unit)`
+  
+)
+
+RateOfchange$RBCinfusion <- RateOfchange$RBCinfusion....HospitalDates..RBC.Infusion..unit..
+
+
+```
+
+### Absolute and Percent Change
+
+Next we will calculate percent change
+
+```{r Absolute Change}
+# Add Absolute Change to dataframe
+
+
+WBCdiff <- diff(RateOfchange$WBC....na.ma.HospitalDates..WBC..K.uL....k...2..weighting....simple.., lag = 1, differences = 1)
+ts.plot(WBCdiff)
+
+RBCdiff <- diff(RateOfchange$RBC....na.ma.HospitalDates..RBCs..M.uL....k...2..weighting....simple.., lag = 1, differences = 1)
+ts.plot(RBCdiff)
+
+Plateletsdiff <- diff(RateOfchange$Platelets....na.ma.HospitalDates..Platelets..K.uL....k...2..weighting....simple.., lag = 1, differences = 1)
+ts.plot(Plateletsdiff)
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+```{r Predicate based on events}
+library(dplyr)
+mutate(base_RBCinfusion = RateOfchange[RateOfchange$RBCinfusion  == "1"], 
+growth_from_RBCbase = RateOfchange - base_RBCinfusion, 
+growth_percent_from_base = growth_from_base / base_RBCinfusion * 100)
+```

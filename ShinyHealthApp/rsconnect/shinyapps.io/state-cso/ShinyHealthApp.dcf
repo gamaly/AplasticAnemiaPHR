@@ -1,0 +1,12 @@
+name: ShinyHealthApp
+title: ShinyHealthApp
+username:
+account: state-cso
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 300307
+bundleId: 1271866
+url: https://gamaly.shinyapps.io/ShinyHealthApp/
+when: 1521206838.13276
+asMultiple: FALSE
+asStatic: FALSE
